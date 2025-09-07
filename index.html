@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="个人知识点管理系统，支持自定义分类和关键词" />
+  <title>知识点管理系统</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" role="img" aria-label="知识灯泡">💡</span>
+      <h1>知识点管理系统</h1>
+    </div>
+    <nav class="toolbar" role="navigation" aria-label="主要操作">
+      <div class="searchbox">
+        <label for="searchInput" class="sr-only">搜索知识点</label>
+        <input id="searchInput" type="search" placeholder="输入关键词搜索..." aria-label="搜索知识点" />
+        <button id="searchBtn" type="button" aria-label="执行搜索">🔍</button>
+        <button id="clearSearchBtn" type="button" aria-label="清空搜索" class="clear-btn hidden">✕</button>
+      </div>
+      <button id="randomTestBtn" type="button" class="primary">随机测试</button>
+      <button id="favoriteToggle" type="button">只看收藏</button>
+      <div class="file-operations">
+        <button id="exportBtn" type="button">导出JSON</button>
+        <input id="importFile" type="file" accept=".json" style="display:none" aria-label="选择JSON文件导入" />
+        <button id="importBtn" type="button">导入JSON</button>
+      </div>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar" role="complementary">
+      <form class="panel" id="knowledgeForm" novalidate>
+        <h2 class="panel-title">➕ 添加知识点</h2>
+
+        <div class="field">
+          <label for="questionInput">问题 <span class="required">*</span></label>
+          <input id="questionInput" type="text" required placeholder="在此输入问题（必填）" 
+                 aria-describedby="questionError" maxlength="200" />
+          <div id="questionError" class="error-message" role="alert"></div>
+        </div>
+
+        <div class="field">
+          <label for="answerInput">答案 <span class="required">*</span></label>
+          <textarea id="answerInput" required rows="6" placeholder="在此输入答案（必填）" 
+                    aria-describedby="answerError" maxlength="1000"></textarea>
+          <div id="answerError" class="error-message" role="alert"></div>
+        </div>
+
+        <div class="field">
+          <label for="categoryInput">分类</label>
+          <input id="categoryInput" type="text" placeholder="例如: 技术 / 历史 / 自定义分类" 
+                 list="categoryDatalist" maxlength="50" />
+          <datalist id="categoryDatalist"></datalist>
+        </div>
+
+        <div class="field">
+          <label for="keywordInput">关键词</label>
+          <div id="keywordList" class="chips" role="list" aria-label="已添加的关键词"></div>
+          <div class="keyword-input-wrapper">
+            <input id="keywordInput" type="text" placeholder="输入关键词按回车添加" 
+                   aria-describedby="keywordHelp" maxlength="30" />
+            <button id="addKeywordBtn" type="button" aria-label="添加关键词">添加</button>
+          </div>
+          <div id="keywordHelp" class="help-text">按回车或点击添加按钮来添加关键词，右键点击关键词可删除</div>
+        </div>
+
+        <div class="actions">
+          <button id="saveBtn" type="submit" class="primary">保存知识点</button>
+          <button id="cancelBtn" type="button" class="ghost hidden">取消编辑</button>
+        </div>
+      </form>
+    </aside>
+
+    <main class="content" role="main">
+      <div class="content-header">
+        <div id="categoryTabs" class="tabs" role="tablist" aria-label="知识点分类"></div>
+        <div class="stats">
+          <span id="totalCount" class="stat-item">总计: 0</span>
+          <span id="visibleCount" class="stat-item">显示: 0</span>
+        </div>
+      </div>
+      <section id="cardsContainer" class="cards" role="region" aria-label="知识点列表" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <!-- 测试弹窗 -->
+  <div id="testModal" class="modal hidden" role="dialog" aria-labelledby="testModalTitle" aria-modal="true">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="testModalTitle">随机测试</h2>
+        <button id="closeTestModalBtn" type="button" class="close-btn" aria-label="关闭测试">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="test-question">
+          <label for="testAnswer">问题：</label>
+          <p id="testQuestion" class="question-text"></p>
+        </div>
+        <div class="test-input">
+          <label for="testAnswer">你的答案（可选）：</label>
+          <textarea id="testAnswer" rows="4" placeholder="写下你的答案..." aria-describedby="testHint"></textarea>
+          <div id="testHint" class="help-text">可以先思考并写下答案，然后查看正确答案对比</div>
+        </div>
+        <div id="correctAnswer" class="correct-answer hidden">
+          <h3>正确答案：</h3>
+          <div class="answer-content"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="showAnswerBtn" type="button" class="primary">显示答案</button>
+        <button id="nextQuestionBtn" type="button" class="secondary hidden">下一题</button>
+        <button id="closeTestBtn" type="button" class="ghost">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 确认删除弹窗 -->
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-labelledby="confirmModalTitle" aria-modal="true">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-content small">
+      <div class="modal-header">
+        <h2 id="confirmModalTitle">确认删除</h2>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage">确定要删除这个知识点吗？此操作无法撤销。</p>
+      </div>
+      <div class="modal-actions">
+        <button id="confirmDeleteBtn" type="button" class="danger">确认删除</button>
+        <button id="cancelDeleteBtn" type="button" class="ghost">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 提示信息 -->
+  <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
+  <footer class="footer">
+    <p>💾 数据自动保存到本地浏览器 | 📁 支持导入/导出 JSON 文件 | 🔄 便于跨设备迁移</p>
+    <div class="footer-links">
+      <button id="aboutBtn" type="button" class="link-btn">关于</button>
+      <button id="helpBtn" type="button" class="link-btn">帮助</button>
+    </div>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
